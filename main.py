@@ -1,6 +1,7 @@
 import pygame
 from sys import exit
 from data import data_planet
+from pygame import mixer
 
 pygame.init()
 
@@ -16,6 +17,11 @@ wiki_index = 0
 ARROW_HEIGHT, ARROW_WIDTH = 30, 20
 PANEL_WIDTH, PANEL_HEIGHT = 300, 300
 MARGIN = 20
+
+# Background Music
+mixer.music.load("./assets/sfx/bg-sound.wav")
+mixer.music.play(-1)
+
 
 # Game Variable
 username = 'Masukkan nama'
@@ -247,43 +253,56 @@ while True:
                 pass  # Ignore Tab key
             elif event.unicode and event.type != pygame.MOUSEBUTTONDOWN:
                 username += event.unicode
+                
+        
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
+            click_sound = pygame.mixer.Sound("./assets/sfx/click-sound.wav")
             if current_page == "welcome":
+                click_sound.play()
                 button_rect = input_name()
                 current_page = "input_name"
             elif current_page == "input_name":
                 if button_rect.collidepoint(event.pos):
+                    click_sound.play()
                     main_menu()
                     current_page = "main_menu"
             elif current_page == "main_menu":
+                click_sound.play()
                 main_menu_rects = main_menu()
                 wiki_rect, quiz_rect, about_rect = main_menu_rects
                 if wiki_rect.collidepoint(event.pos):
+                    click_sound.play()
                     wiki_index = 0
                     wiki(wiki_index)
                     current_page = "wiki"
                 elif quiz_rect.collidepoint(event.pos):
+                    click_sound.play()
                     quiz()
                 elif about_rect.collidepoint(event.pos):
+                    click_sound.play()
                     about()
                     current_page = "about"
             elif current_page == "about":
                 home_button_rect = about()
                 if home_button_rect.collidepoint(event.pos):
+                    click_sound.play()
                     main_menu()
                     current_page = "main_menu"
             elif current_page == "wiki":
                 wiki_rects = wiki(wiki_index)
                 home_button_rect, previous_button_rect, next_button_rect = wiki_rects
                 if home_button_rect.collidepoint(event.pos):
+                    click_sound.play()
                     main_menu()
                     current_page = "main_menu"
                 if next_button_rect.collidepoint(event.pos) and wiki_index < (len(data_planet) - 1):
+                    click_sound.play()
                     wiki_index += 1
                     wiki(wiki_index)
                     current_page = "wiki"
                 if previous_button_rect.collidepoint(event.pos) and wiki_index > 0:
+                    click_sound.play()
                     wiki_index -= 1
                     wiki(wiki_index)
                     current_page = "wiki"
