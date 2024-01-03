@@ -5,6 +5,7 @@ from pygame import mixer
 from data import questions
 from data import options
 from data import answers
+import time
 
 pygame.init()
 
@@ -49,12 +50,34 @@ def handle_click(mouse_pos, option_rects, correct_answer):
         if option_rect.collidepoint(mouse_pos):
             click_sound.play()
             selected_option = chr(ord('A') + i)
+            option_font = pygame.font.Font('./assets/fonts/Press_Start_2P/PressStart2P-Regular.ttf', 20)
+            
             if selected_option == correct_answer:
                 quiz_score += 1
                 correct_sound.play()
+                
+                message = display_text("Jawaban kamu benar", 20, "green")
             else:
                 wrong_sound.play()
                 print(f"Wrong! The correct answer is {correct_answer}")
+                
+                # Change the color of the selected option to red
+                option_surface = option_font.render(options[question_number][i], True, (255, 0, 0))
+                option_rect.width, option_rect.height = option_surface.get_size()
+                SCREEN.blit(option_surface, option_rect)
+
+                # Change the color of the correct answer to green
+                correct_option_index = ord(correct_answer) - ord('A')
+                correct_option_surface = option_font.render(options[question_number][correct_option_index], True, (0, 255, 0))
+                correct_option_rect = option_rects[correct_option_index]
+                SCREEN.blit(correct_option_surface, correct_option_rect)
+                
+                message = display_text("Jawaban kamu salah", 20, "red")
+                
+            message_rect = message.get_rect(center=(WIDTH // 2, 100))
+            SCREEN.blit(message, message_rect)
+            pygame.display.flip()
+            time.sleep(1)
             
             # Increment question_number even when the answer is wrong
             if question_number < (len(questions) - 1):
