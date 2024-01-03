@@ -2,6 +2,9 @@ import pygame
 from sys import exit
 from data import data_planet
 from pygame import mixer
+from data import questions
+from data import options
+from data import answers
 
 pygame.init()
 
@@ -15,8 +18,10 @@ BG = pygame.transform.scale(image_background, (WIDTH, HEIGHT))
 current_page = "welcome"
 wiki_index = 0
 ARROW_HEIGHT, ARROW_WIDTH = 30, 20
-PANEL_WIDTH, PANEL_HEIGHT = 300, 300
+PANEL_WIDTH, PANEL_HEIGHT = 300, 325
 MARGIN = 20
+question_number = 0
+quiz_score = 0
 
 # Background Music
 mixer.music.load("./assets/sfx/bg-sound.wav")
@@ -29,6 +34,66 @@ username = 'Masukkan nama'
 def display_text(text, size, color):
     FONT = pygame.font.Font('./assets/fonts/Press_Start_2P/PressStart2P-Regular.ttf', size)
     return FONT.render(text, False, color)
+
+def is_point_inside_rect(point, rect):
+    return rect.left < point[0] < rect.right and rect.top < point[1] < rect.bottom
+
+def handle_click(mouse_pos, option_rects, correct_answer):
+    global question_number, quiz_score, current_page
+    
+    click_sound = pygame.mixer.Sound("./assets/sfx/click-sound.wav")
+    wrong_sound = pygame.mixer.Sound("./assets/sfx/wrong-sound.wav")
+    correct_sound = pygame.mixer.Sound("./assets/sfx/correct-sound.wav")
+    
+    for i, option_rect in enumerate(option_rects):
+        if option_rect.collidepoint(mouse_pos):
+            click_sound.play()
+            selected_option = chr(ord('A') + i)
+            if selected_option == correct_answer:
+                quiz_score += 1
+                correct_sound.play()
+            else:
+                wrong_sound.play()
+                print(f"Wrong! The correct answer is {correct_answer}")
+            
+            # Increment question_number even when the answer is wrong
+            if question_number < (len(questions) - 1):
+                question_number += 1
+            else:
+                current_page = "score"  # Change current_page to "score"
+
+
+def quiz_questions(text, size, color, max_width):
+    FONT = pygame.font.Font('./assets/fonts/Press_Start_2P/PressStart2P-Regular.ttf', size)
+    words = text.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+        # Check if adding the word exceeds the maximum width
+        if FONT.size(' '.join(current_line + [word]))[0] <= max_width:
+            current_line.append(word)
+        else:
+            lines.append(' '.join(current_line))
+            current_line = [word]
+
+    # Add the last line
+    lines.append(' '.join(current_line))
+
+    # Render each line separately
+    surfaces = [FONT.render(line, False, color) for line in lines]
+
+    # Get the total height of all lines
+    total_height = sum(surface.get_height() for surface in surfaces)
+
+    # Calculate the y-coordinate for the first line
+    y = (HEIGHT - total_height) // 2 - 60
+
+    # Blit each line to the screen
+    for surface in surfaces:
+        rect = surface.get_rect(center=(WIDTH // 2, y))
+        SCREEN.blit(surface, rect)
+        y += surface.get_height()
 
 def panel_text(text, font_size, color, max_width):
     words = text.split()
@@ -237,8 +302,59 @@ def wiki(i):
     return home_button_rect, previous_button_rect, next_button_rect;
 
 
-def quiz():
-    print("Quiz")
+def quiz(i):
+    # Display quiz questions
+    quiz_questions(questions[i], 24, "white", WIDTH - 20)
+    
+    # Display Options
+    option_rects = []
+    for index, option in enumerate(options[i]):
+        option_surface = display_text(option, 20, "white")
+        # Adjust the vertical position based on the index
+        y_position = HEIGHT // 2 + index * (option_surface.get_height() + 15)  # You can adjust the spacing (5 in this case)
+        option_rect = option_surface.get_rect(center=(WIDTH // 2, y_position))
+        SCREEN.blit(option_surface, option_rect)
+        option_rects.append(option_rect)
+        
+    return option_rects
+
+def score():    
+    button_width, button_height = 100, 40
+    
+    if quiz_score > 2 :
+        score_color = "green"
+        text = "Selamat, " + username + "!! Kamu mendapatkan score :"
+    elif quiz_score <= 2 :
+        score_color = "red"
+        text = "Jangan patah semangat, " + username +". Ayo belajar lagi. Kamu mendapatkan score :"
+    else :
+        score_color = "white"
+        text = ""
+        
+    quiz_questions(text, 24, "white", WIDTH - 20)
+    
+    score_surface = display_text(str(quiz_score), 24, score_color)
+    score_rect = score_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    SCREEN.blit(score_surface, score_rect)
+    
+    # Calculate margin from the right and bottom
+    margin_right = 20
+    margin_bottom = 20
+
+    # Calculate button position
+    button_rect = pygame.Rect(WIDTH - button_width - margin_right, HEIGHT - button_height - margin_bottom, button_width, button_height)
+    button_color = 'white'
+
+    # Draw the button with a white background
+    pygame.draw.rect(SCREEN, button_color, button_rect)
+
+    # Render button text
+    button_text = display_text("Home", 20, "Black")  # You can adjust the text color
+    button_text_rect = button_text.get_rect(center=button_rect.center)
+    SCREEN.blit(button_text, button_text_rect)
+    
+    return button_rect
+    
     
 while True:
     for event in pygame.event.get():
@@ -278,7 +394,8 @@ while True:
                     current_page = "wiki"
                 elif quiz_rect.collidepoint(event.pos):
                     click_sound.play()
-                    quiz()
+                    quiz(question_number)
+                    current_page = "quiz"
                 elif about_rect.collidepoint(event.pos):
                     click_sound.play()
                     about()
@@ -306,6 +423,19 @@ while True:
                     wiki_index -= 1
                     wiki(wiki_index)
                     current_page = "wiki"
+            elif current_page == "quiz":
+                option_rects = quiz(question_number)
+                mouse_pos = pygame.mouse.get_pos()
+                correct_answer = answers[question_number]
+                handle_click(mouse_pos, option_rects, correct_answer)
+            elif current_page == "score":
+                button_rect = score()
+                if button_rect.collidepoint(event.pos):
+                    click_sound.play()
+                    quiz_score = 0
+                    question_number = 0
+                    main_menu()
+                    current_page = "main_menu"
                     
     SCREEN.blit(BG, (0,0))  # Clear the screen
     
@@ -319,6 +449,10 @@ while True:
         about()
     elif current_page == "wiki":
         wiki(wiki_index)
+    elif current_page == "quiz":
+        quiz(question_number)
+    elif current_page == "score":
+        score()
                 
     pygame.display.update()
     FRAME.tick(60)
